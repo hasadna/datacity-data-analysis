@@ -12,16 +12,19 @@ YEAR = re.compile(r'[12]\d{3}')
 YEAR_EXT = re.compile(r'[12]\d{3}/\d\d')
 YEAR_RANGE = re.compile(r'[12]\d{3}\s*[-/]\s*[12]\d{3}')
 HEBYEAR = re.compile('תש["״][א-ת]|תש[א-ת]["״][א-ת]')
+COMPARE_YEAR = re.compile('לעומת [0-9]{4}')
 DIGITS = re.compile('([0-9-]{2,})')
 MULTI_WS = re.compile('\s+')
 
 def fix_years():
 
     hebyears = set()
+    shown = set()
 
     def func(row):
         headers = row['header']
         year = str(row['year'])
+        headers = COMPARE_YEAR.sub('לעומת', headers)
         hebyears.update(HEBYEAR.findall(headers))
         headers = HEBYEAR.sub('', headers)
         years = []
@@ -59,8 +62,8 @@ def fix_years():
             headers = headers.replace(' /', '/')
             headers = headers.replace('//', '/')
             headers = headers.replace('//', '/')
-            assert headers != 'חינוך והשכלה/גיל 6', repr(row['header'])
-            row['header'] = headers
+
+        row['header'] = headers
 
     return DF.Flow(
         DF.add_field('min_year', 'integer'),
@@ -138,6 +141,8 @@ def specific_fixes():
                 continue
             if name == 'תל אביב -יפו':
                 row['name'] = 'תל אביב-יפו'
+            if name == 'הרצלייה':
+                row['name'] = 'הרצליה'
             yield row
     return func
 
@@ -156,8 +161,23 @@ def value_fixes():
                         value *= 1000
                         row['header'] = 'סה"כ אוכלוסייה'
                         row['value'] = str(value)
+                    if header == 'סה"כ גברים (אלפים)':
+                        value *= 1000
+                        row['header'] = 'סה"כ גברים'
+                        row['value'] = str(value)
+                    if header == 'סה"כ נשים (אלפים)':
+                        value *= 1000
+                        row['header'] = 'סה"כ נשים'
+                        row['value'] = str(value)
+                    if header.endswith('(שטח במ"ר)'):
+                        value /= 1000
+                        row['header'] = header.replace('(שטח במ"ר)', '(שטח באלפי מ"ר)')
+                        row['value'] = str(value)
                 except:
                     pass
+                #TODO join 'גמר של סלילת כבישים חדשים' and 'גמר של הרחבה ושיקום של כבישים חדשים' to 'גמר של סלילת כבישים חדשים, הרחבה ושיקום של כבישים'
+                #TODO same for 'התחלה...'
+
             yield row
     return func
 

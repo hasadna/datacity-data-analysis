@@ -42,6 +42,8 @@ def get_safe(data, r, c):
 def fix_value(v, bad_floats):
     if v in ('-', '..', '', '.', None):
         return None
+    if 'http' in v:
+        return None
     if LETTERS.findall(v):
         return v
     v = v.replace(',', '')
@@ -49,6 +51,8 @@ def fix_value(v, bad_floats):
     v = v.strip()
     if v.startswith('(') and v.endswith(')'):
         v = v[1:-1]
+    if v.endswith('.0'):
+        v = v[:-2]
     try:
         float(v)
     except Exception as e:
@@ -61,6 +65,7 @@ def process_sheet(year, name, data, filename): #noqa
     # print(config)
     if config.skip:
         return
+    print('PROCESSING', repr(year), repr(name), config)
 
     magic_pos = []
     candidates = set()
@@ -118,8 +123,8 @@ def process_sheet(year, name, data, filename): #noqa
                     for ii in range(i + 1, headers_size):
                         headers_front[ii] = None
         # print(year, name, c, headers_front, column)
-        # print(header)
         header = [v for v in headers_front if v]
+        # print(header)
 
         # print('HHH', headers_front)
 
@@ -143,12 +148,13 @@ def process_sheet(year, name, data, filename): #noqa
         header = [x for x in header if x and len(x) > 1]
         header = '/'.join(header)
         headers.append(header)
-        assert header != 'שכר ורווחה/2015/גברים', repr((header, headers_front))
+        # assert header != 'שכר ורווחה/2015/גברים', repr((header, headers_front))
 
         c += 1
     assert name_idx is not None, f'Failed to find name index {year}, {name}, {headers[:10]}'
+
     r = min_row + headers_size
-    bad_floats = set()
+    max_r = None
     while True:
         row = [
             get(r, min_col + c)
@@ -156,9 +162,28 @@ def process_sheet(year, name, data, filename): #noqa
         ]
         if not any(row):
             break
-        muni_name = row[name_idx].strip().replace('*', '')
-        if len([x for x in row if x]) < MIN_SIZE/2:
-            break
+        if max_r is None:
+            max_r = r
+        if len([x for x in row if x]) > MIN_SIZE/2:
+            max_r = r
+        r += 1
+
+    r = min_row + headers_size
+    bad_floats = set()
+    while r <= max_r:
+        row = [
+            get(r, min_col + c)
+            for c in range(len(headers))
+        ]
+        # if not any(row):
+        #     break
+        try:
+            muni_name = row[name_idx].strip().replace('*', '')
+        except:
+            print('ERROR', config, year, repr(name), row)
+            raise
+        # if len([x for x in row if x]) < MIN_SIZE/2:
+        #     break
         for h, v in zip(headers, row):
             if h != headers[name_idx]:
                 v = fix_value(v, bad_floats)
@@ -195,6 +220,7 @@ def preprocess_file(year, filename):
             sheet = wb.sheet_by_index(idx)
             if sheet.nrows < MIN_SIZE or sheet.ncols < MIN_SIZE:
                 continue
+            # print(year, filename, sheet.name, sheet.ncols, sheet.nrows)
             data = [
                 [clean(sheet.cell_value(r, c)) for c in range(sheet.ncols)]
                 for r in range(sheet.nrows)
@@ -205,5 +231,5 @@ def preprocess_file(year, filename):
 def preprocess_files(filenames):
     for year, filename in filenames.items():
         print(year, filename)
-        # if year < 2016: continue
+        # if year != 2021: continue
         yield from preprocess_file(year, filename)
