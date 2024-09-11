@@ -61,7 +61,8 @@ def fix_value(v, bad_floats):
 
 
 def process_sheet(year, name, data, filename): #noqa
-    config = CONFIGURATION.get(year, dict()).get(name.strip()) or Config()
+    name = name.strip()
+    config = CONFIGURATION.get(year, dict()).get(name) or Config()
     # print(config)
     if config.skip:
         return
@@ -231,5 +232,5 @@ def preprocess_file(year, filename):
 def preprocess_files(filenames):
     for year, filename in filenames.items():
         print(year, filename)
-        # if year != 2021: continue
+        # if year < 2021: continue
         yield from preprocess_file(year, filename)

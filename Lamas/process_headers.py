@@ -4,7 +4,7 @@ import dataflows as DF
 import re
 from decimal import Decimal
 
-from fuzzywuzzy import fuzz
+from thefuzz import fuzz
 
 from dataflows_airtable import load_from_airtable
 
@@ -14,7 +14,7 @@ YEAR_RANGE = re.compile(r'[12]\d{3}\s*[-/]\s*[12]\d{3}')
 HEBYEAR = re.compile('תש["״][א-ת]|תש[א-ת]["״][א-ת]')
 COMPARE_YEAR = re.compile('לעומת [0-9]{4}')
 DIGITS = re.compile('([0-9-]{2,})')
-MULTI_WS = re.compile('\s+')
+MULTI_WS = re.compile(r'\s+')
 
 def fix_years():
 

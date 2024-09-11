@@ -5,20 +5,23 @@ import shutil
 BASE_URL = 'https://www.cbs.gov.il/he/publications/doclib/2019/hamakomiot1999_2017/'
 DOWNLOADS_DIR = 'downloads'
 MIN_YEAR = 1999
-MAX_YEAR = 2021
+MAX_YEAR = 2022
 XLSX_YEAR = 2016
-P_LIBUD = {2021}
+P_LIBUD = {2022}
+P_LIBUD2 = {2021}
 
 
 def download_excel(year):
     out_filename = f'{year}' + ('.xlsx' if year >= XLSX_YEAR else '.xls')
     if year in P_LIBUD:
         filename = f'p_libud_{year % 1000}.xlsx'
+    if year in P_LIBUD2:
+        filename = f'p_libud_{year}.xlsx'
     else:
         filename = out_filename
     url = BASE_URL + filename
     out_filename = f'{DOWNLOADS_DIR}/lamas-muni-{out_filename}'
-    if not os.path.exists(filename):
+    if not os.path.exists(out_filename):
         r = requests.get(url, stream=True)
         assert r.status_code == 200, f'Failed to download {url}'
         with open(out_filename, 'wb') as f:

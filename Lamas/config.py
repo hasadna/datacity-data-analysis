@@ -39,5 +39,12 @@ CONFIGURATION = {
         'נתונים פיזיים ונתוני אוכלוסייה': Config(header_rows=4, extend_headers_top=2),
         'נתוני תקציב': Config(header_rows=2, extend_headers_top=1),
         'נתוני הסקר החברתי': Config(skip=True),
+        'סקרי כוח אדם והוצאות משק בית': Config(skip=True),
+    },
+    2022: {
+        'נתונים פיזיים ונתוני אוכלוסייה': Config(header_rows=4, extend_headers_top=2),
+        'נתוני תקציב': Config(header_rows=2, extend_headers_top=1),
+        'נתוני הסקר החברתי': Config(skip=True),
+        'סקרי כוח אדם והוצאות משק בית': Config(skip=True),
     },
 }
