@@ -1,0 +1,93 @@
+version: 1
+defaults:
+  header_rows: 1
+  extend_headers_top: 0
+  extend_headers_bottom: 0
+  skip: false
+years:
+  2000:
+    עיריות ומועצות מקומיות:
+      skip: true
+  2001:
+    עיריות ומועצות מקומיות:
+      skip: true
+  2016:
+    נתוני תקציב:
+      header_rows: 4
+      extend_headers_top: 2
+    נתונים פיזיים ונתוני אוכלוסייה:
+      header_rows: 4
+      extend_headers_top: 2
+  2017:
+    נתוני תקציב:
+      header_rows: 5
+      extend_headers_top: 2
+    נתונים פיזיים ונתוני אוכלוסייה:
+      header_rows: 4
+      extend_headers_top: 2
+  2018:
+    נתוני תקציב:
+      header_rows: 5
+    נתונים פיזיים ונתוני אוכלוסייה:
+      header_rows: 4
+      extend_headers_top: 2
+  2019:
+    נתוני תקציב:
+      header_rows: 5
+      extend_headers_top: 1
+    נתונים פיזיים ונתוני אוכלוסייה:
+      header_rows: 4
+      extend_headers_top: 2
+  2020:
+    נתוני תקציב:
+      header_rows: 5
+      extend_headers_top: 1
+    נתונים פיזיים ונתוני אוכלוסייה:
+      header_rows: 4
+      extend_headers_top: 2
+  2021:
+    נתוני הסקר החברתי:
+      skip: true
+    נתוני תקציב:
+      header_rows: 2
+      extend_headers_top: 1
+    נתונים פיזיים ונתוני אוכלוסייה:
+      header_rows: 4
+      extend_headers_top: 2
+    סקרי כוח אדם והוצאות משק בית:
+      skip: true
+  2022:
+    נתוני הסקר החברתי:
+      skip: true
+    נתוני תקציב:
+      header_rows: 2
+      extend_headers_top: 1
+    נתונים פיזיים ונתוני אוכלוסייה:
+      header_rows: 4
+      extend_headers_top: 2
+    סקרי כוח אדם והוצאות משק בית:
+      skip: true
+  2023:
+    נתוני הסקר החברתי:
+      skip: true
+    נתוני תקציב:
+      header_rows: 2
+      extend_headers_top: 1
+      extend_headers_bottom: 4
+    נתונים פיזיים ונתוני אוכלוסייה:
+      header_rows: 4
+      extend_headers_top: 2
+      extend_headers_bottom: 5
+  2024:
+    נתוני הסקר החברתי:
+      skip: true
+    נתוני תקציב:
+      header_rows: 2
+      extend_headers_top: 1
+      extend_headers_bottom: 4
+    נתונים פיזיים ונתוני אוכלוסייה:
+      header_rows: 4
+      extend_headers_top: 2
+      extend_headers_bottom: 5
+    סקרי כוח אדם והוצאות משק בית:
+      skip: true

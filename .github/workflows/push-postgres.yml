@@ -1,0 +1,76 @@
+name: Push to Postgres
+
+# Manual trigger ONLY - this truncates and overwrites the production lamas_muni table. It must
+# never run automatically on push/PR; every other workflow in this repo pushes nothing.
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type PUSH to confirm this will TRUNCATE and overwrite the production lamas_muni table'
+        required: true
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Confirm intent
+        run: |
+          if [ "${{ github.event.inputs.confirm }}" != "PUSH" ]; then
+            echo "::error::Confirmation input must be exactly 'PUSH' - aborting."
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Ensure psql is available
+        run: command -v psql || (sudo apt-get update && sudo apt-get install -y postgresql-client)
+
+      - name: Install lamas package
+        run: pip install -e "Lamas/[dev]"
+
+      # Same cache keys as lamas-tests.yml (repo-scoped, so this reuses whatever it already
+      # populated) - see that workflow for the rationale.
+      - name: Cache downloaded workbooks
+        uses: actions/cache@v4
+        with:
+          path: Lamas/downloads
+          key: lamas-downloads-v1
+
+      - name: Download all configured years
+        run: lamas download
+        continue-on-error: true
+
+      - name: Cache preprocessed checkpoint
+        uses: actions/cache@v4
+        with:
+          path: Lamas/.cache
+          key: lamas-checkpoint-${{ hashFiles('Lamas/downloads/**', 'Lamas/lamas/preprocess.py', 'Lamas/lamas/sheet_config.py', 'Lamas/data/sheet_config.yaml') }}
+
+      - name: Ensure data is available (checkpoint or fresh download)
+        run: |
+          if [ -f Lamas/.cache/preprocessed.parquet ]; then
+            echo "Using cached checkpoint"
+          elif [ -n "$(ls -A Lamas/downloads 2>/dev/null)" ]; then
+            lamas preprocess
+          else
+            echo "::error::No downloaded workbooks and no cached checkpoint - cannot build"
+            exit 1
+          fi
+
+      - name: Regenerate pending-headers report
+        run: lamas map-headers
+
+      - name: Run the full QA suite before pushing
+        run: pytest Lamas/tests/ -v
+
+      - name: Build (local output, strict - refuses if any header is unresolved)
+        run: lamas build --strict --output local
+
+      - name: Push to Postgres
+        env:
+          DATAFLOWS_DB_ENGINE: ${{ secrets.DATAFLOWS_DB_ENGINE }}
+        run: lamas push-postgres

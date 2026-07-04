@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lamas"
+version = "0.1.0"
+description = "Ingest and normalize CBS (Lamas) municipal statistics into tidy rows"
+requires-python = ">=3.10"
+dependencies = [
+    "dataflows==0.5.9",
+    "openpyxl==3.1.5",
+    "xlrd==2.0.1",
+    "thefuzz==0.20.0",
+    "requests>=2.32",
+    "python-dotenv>=1.0",
+    "pyyaml>=6.0",
+    "click>=8.1",
+    "pandas>=2.2",
+    "pyarrow>=15.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    # Only needed by the one-time scripts/seed_mapping_from_airtable.py migration helper and for
+    # anyone who wants historical-audit read access to the Airtable "Header Mapping" table.
+    "dataflows-airtable==0.2.5",
+]
+
+[project.scripts]
+lamas = "lamas.cli:main"
+
+[tool.setuptools]
+packages = ["lamas", "lamas.headers", "lamas.io"]

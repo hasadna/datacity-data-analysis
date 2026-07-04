@@ -1,0 +1,79 @@
+name: Lamas tests
+
+on:
+  pull_request:
+    paths:
+      - 'Lamas/**'
+      - '.github/workflows/lamas-tests.yml'
+  push:
+    branches:
+      - master
+    paths:
+      - 'Lamas/**'
+      - '.github/workflows/lamas-tests.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install lamas package
+        run: pip install -e "Lamas/[dev]"
+
+      # CBS's historical workbooks (1999-2024) are effectively immutable once published, so this
+      # cache almost always hits and the download step below becomes a no-op (download_excel
+      # skips any file that already exists). Bump the key suffix if a genuine re-download is ever
+      # needed (e.g. downloader.py's year range changes).
+      - name: Cache downloaded workbooks
+        uses: actions/cache@v4
+        with:
+          path: Lamas/downloads
+          key: lamas-downloads-v1
+
+      # Best-effort: a transient network hiccup hitting CBS's site shouldn't hard-fail the whole
+      # job if we already have a viable checkpoint from cache (see the "Ensure test data is
+      # available" step below, which is the one that actually enforces data availability).
+      - name: Download all configured years
+        run: lamas download
+        continue-on-error: true
+
+      # Invalidated whenever code that affects extraction changes (sheet config, preprocessing
+      # logic, or the downloaded files themselves), so a real bug fix always gets re-checked
+      # against fresh data rather than serving a stale, possibly-buggy checkpoint from cache.
+      - name: Cache preprocessed checkpoint
+        uses: actions/cache@v4
+        with:
+          path: Lamas/.cache
+          key: lamas-checkpoint-${{ hashFiles('Lamas/downloads/**', 'Lamas/lamas/preprocess.py', 'Lamas/lamas/sheet_config.py', 'Lamas/data/sheet_config.yaml') }}
+
+      # Ensures the data-dependent tests in test_quality_report.py actually RUN instead of
+      # silently skipping: either a fresh/cached checkpoint already exists, or we build one from
+      # whatever was downloaded (even a partial set, if the download step above hit a snag) - only
+      # fail outright if there's truly nothing to build a checkpoint from at all.
+      - name: Ensure test data is available (checkpoint or fresh download)
+        run: |
+          if [ -f Lamas/.cache/preprocessed.parquet ]; then
+            echo "Using cached checkpoint"
+          elif [ -n "$(ls -A Lamas/downloads 2>/dev/null)" ]; then
+            echo "No cached checkpoint - preprocessing downloaded workbooks"
+            lamas preprocess
+          else
+            echo "::error::No downloaded workbooks and no cached checkpoint - cannot run data-dependent tests"
+            exit 1
+          fi
+
+      - name: Regenerate pending-headers report
+        run: lamas map-headers
+
+      - name: Run pytest
+        # -rA surfaces captured stdout for EVERY outcome, including PASSED - several tests in
+        # test_quality_report.py (near-duplicate canonicals, naming-convention violations) are
+        # deliberately non-blocking reports that print findings without failing; pytest hides
+        # captured stdout for passing tests by default, which would otherwise silently swallow
+        # them here.
+        run: pytest Lamas/tests/ -v -rA
