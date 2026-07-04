@@ -19,6 +19,12 @@ P_LIBUD = {2022, 2023, 2024}   # -> p_libud_{2-digit year}.xlsx
 P_LIBUD2 = {2021}              # -> p_libud_{4-digit year}.xlsx
 
 
+# (connect timeout, read timeout) in seconds - without this, a slow/unresponsive connection to
+# CBS's site can hang a download indefinitely (found for real: a CI run stalled 7+ minutes on a
+# single request with no timeout set at all).
+REQUEST_TIMEOUT = (10, 60)
+
+
 def download_excel(year, downloads_dir=DOWNLOADS_DIR):
     out_filename = f'{year}' + ('.xlsx' if year >= XLSX_YEAR else '.xls')
     if year in P_LIBUD:
@@ -31,7 +37,7 @@ def download_excel(year, downloads_dir=DOWNLOADS_DIR):
     out_filename = f'{downloads_dir}/lamas-muni-{out_filename}'
     if not os.path.exists(out_filename):
         logger.info('Downloading %s -> %s', url, out_filename)
-        r = requests.get(url, stream=True)
+        r = requests.get(url, stream=True, timeout=REQUEST_TIMEOUT)
         assert r.status_code == 200, f'Failed to download {url}'
         with open(out_filename, 'wb') as f:
             shutil.copyfileobj(r.raw, f)
@@ -40,8 +46,14 @@ def download_excel(year, downloads_dir=DOWNLOADS_DIR):
 
 
 def download_all(downloads_dir=DOWNLOADS_DIR, min_year=MIN_YEAR, max_year=MAX_YEAR):
+    """Downloads every configured year, isolated per-year: one year timing out or failing
+    (network hiccup, a URL pattern change) is logged and skipped rather than aborting the whole
+    batch, so as many years as possible are still available afterward."""
     os.makedirs(downloads_dir, exist_ok=True)
-    return dict(
-        (year, download_excel(year, downloads_dir))
-        for year in range(min_year, max_year + 1)
-    )
+    filenames = {}
+    for year in range(min_year, max_year + 1):
+        try:
+            filenames[year] = download_excel(year, downloads_dir)
+        except Exception as e:
+            logger.error('Failed to download year %s: %s', year, e)
+    return filenames
