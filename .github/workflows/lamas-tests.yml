@@ -26,4 +26,9 @@ jobs:
         run: pip install -e "Lamas/[dev]"
 
       - name: Run pytest
-        run: pytest Lamas/tests/ -v
+        # -rA surfaces captured stdout for EVERY outcome, including PASSED - several tests in
+        # test_quality_report.py (near-duplicate canonicals, naming-convention violations) are
+        # deliberately non-blocking reports that print findings without failing; pytest hides
+        # captured stdout for passing tests by default, which would otherwise silently swallow
+        # them here.
+        run: pytest Lamas/tests/ -v -rA
