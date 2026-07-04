@@ -20,6 +20,11 @@ MAGICS_RAW = [
 ]
 SPACES = re.compile(r'\s+')
 LETTERS = re.compile('[א-ת]')
+# Excel embeds invisible Unicode bidi control characters (RIGHT-TO-LEFT EMBEDDING U+202B, POP
+# DIRECTIONAL FORMATTING U+202C, and similar) around numbers in RTL Hebrew sheets to force correct
+# visual rendering direction - found for real, flagged as "BAD FLOATS" because float() can't
+# parse a string with invisible control characters in it even though the visible digits are fine.
+BIDI_CONTROL_CHARS = re.compile('[‎‏‪-‮⁦-⁩]')
 MAGICS = [re.compile(x) for x in MAGICS_RAW]
 MIN_SIZE = 30
 HEADER_SIZE = 5
@@ -67,7 +72,9 @@ def get_safe(data, r, c):
 
 
 def fix_value(v, bad_floats):
-    if v in ('-', '..', '', '.', None):
+    if v is not None:
+        v = BIDI_CONTROL_CHARS.sub('', v).strip()
+    if v in ('-', '..', '', '.', '. .', None):
         return None
     if 'http' in v:
         return None
