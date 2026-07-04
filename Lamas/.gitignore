@@ -1,3 +1,12 @@
 .env
 downloads/
 __pycache__
+*.egg-info/
+.pytest_cache/
+
+# Generated intermediate/output artifacts - not source, regenerate via the lamas CLI.
+.cache/
+reports/*.csv
+reports/*.md
+db_bkp/
+data.pickle
