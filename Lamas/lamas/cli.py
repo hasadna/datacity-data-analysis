@@ -15,7 +15,7 @@ from .headers.pending import resolve_headers, write_pending_report
 from .headers.specific_fixes import specific_fixes
 from .headers.value_fixes import value_fixes
 from .io.local import write_local
-from .io.postgres import PostgresNotConfiguredError, write_postgres
+from .io.postgres import PostgresNotConfiguredError, push_csv_to_postgres
 from .logging_config import setup_logging
 from .sheet_config import SheetConfig
 from .stats import compute_header_stats, write_stats_report
@@ -299,15 +299,36 @@ def build(checkpoint, mapping_path, strict, output, output_dir):
             f'{len(unresolved)} unresolved headers remain - refusing to build in --strict mode'
         )
     targets = [t.strip() for t in output.split(',') if t.strip()]
-    if 'local' in targets:
+    # Postgres is pushed from the local CSV (via psql \copy - see push_csv_to_postgres), so the
+    # local write always happens first when postgres is requested, even if 'local' wasn't asked
+    # for explicitly.
+    if 'local' in targets or 'postgres' in targets:
         write_local(resolved_rows, output_dir)
         click.echo(f'Wrote local output to {output_dir}')
     if 'postgres' in targets:
+        csv_path = Path(output_dir) / 'res_1.csv'
         try:
-            write_postgres(resolved_rows)
+            push_csv_to_postgres(csv_path)
         except PostgresNotConfiguredError as e:
             raise click.ClickException(str(e))
-        click.echo('Wrote to Postgres table lamas_muni')
+        click.echo('Pushed to Postgres table lamas_muni')
+
+
+@main.command('push-postgres')
+@click.option('--csv', 'csv_path', type=click.Path(exists=True), default=str(DEFAULT_OUTPUT_DIR / 'res_1.csv'))
+@click.option('--table', default='lamas_muni')
+@click.option('--truncate/--no-truncate', default=True, help='Truncate the table before copying in (default: on).')
+def push_postgres(csv_path, table, truncate):
+    """Push an already-built CSV file (see `lamas build --output local`) into Postgres via `psql \\copy`.
+
+    Reads the connection string from the DATAFLOWS_DB_ENGINE environment variable. This is a
+    shared-system, destructive write (truncates the table by default) - never run automatically.
+    """
+    try:
+        push_csv_to_postgres(csv_path, table=table, truncate=truncate)
+    except PostgresNotConfiguredError as e:
+        raise click.ClickException(str(e))
+    click.echo(f'Pushed {csv_path} -> Postgres table {table!r}')
 
 
 @main.command('full-run')

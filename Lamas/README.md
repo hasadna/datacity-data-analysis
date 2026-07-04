@@ -43,11 +43,27 @@ drop into just the step you need while iterating on a new year.
 | `lamas mapping confirm-fuzzy --orig "..."` | Accept the fuzzy-match suggestion already recorded for a pending row in `pending_headers.csv`. |
 | `lamas mapping reject-fuzzy --orig "..." [--canonical "..."]` | Override a fuzzy suggestion: map to a different canonical, or omit `--canonical` to make it a brand-new one. |
 | `lamas stats [--year Y]` | Regenerate `reports/header_stats.{csv,md}` - per-header row counts and year coverage, the local replacement for eyeballing the old Airtable "Stats" table. |
-| `lamas build [--strict] [--output local,postgres] [--output-dir PATH]` | Apply `specific_fixes`/`value_fixes` and write the final output. `--strict` refuses to build while any header is unresolved. Defaults to local-only output. |
+| `lamas build [--strict] [--output local,postgres] [--output-dir PATH]` | Apply `specific_fixes`/`value_fixes` and write the final output. `--strict` refuses to build while any header is unresolved. Defaults to local-only output; `postgres` pushes the resulting CSV via `push-postgres` below. |
+| `lamas push-postgres [--csv PATH] [--table lamas_muni] [--truncate/--no-truncate]` | Push an already-built CSV (default `db_bkp/res_1.csv`) into Postgres via `psql \copy`. Reads the connection string from the `DATAFLOWS_DB_ENGINE` env var. Truncates the table first by default (matching a full-replace, not an incremental append) - a destructive, shared-system write, never run automatically. |
 | `lamas full-run [--year Y] [--strict] [--output ...]` | `download` -> `preprocess` -> `map-headers` -> `stats` -> `build`, one shot. |
 | `lamas qa` | Runs the full pytest suite under `tests/` - the automated quality gate (see below). |
 
 Run `lamas <command> --help` for the full flag list on anything above.
+
+### Pushing to Postgres
+
+`DATAFLOWS_DB_ENGINE` is not auto-loaded from `.env` (nothing in the package calls
+`load_dotenv()`) - export it into your shell first:
+```bash
+set -a; source Lamas/.env; set +a
+```
+Then either let `build` push it as part of the pipeline (`lamas build --strict --output local,postgres`),
+or push a CSV you already have on hand directly:
+```bash
+lamas push-postgres --csv db_bkp/res_1.csv
+```
+A manually-triggered GitHub Action (`.github/workflows/push-postgres.yml`) runs this same flow
+using a repo secret - see that workflow file for details. It is never triggered automatically.
 
 ### Quality assurance
 
